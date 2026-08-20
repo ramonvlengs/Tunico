@@ -64,7 +64,9 @@ gateway e conciliacao do extrato no fim do mes.
 
 ### Operacao
 - **Vendas e compras** com itens, desconto por item, frete e parcelamento. Ao
-  faturar, o pedido gera o financeiro e movimenta o estoque.
+  faturar, o pedido gera o financeiro e movimenta o estoque. O faturamento e
+  bloqueado quando levaria o estoque a ficar negativo, dizendo exatamente qual
+  item falta - o pedido pode ficar salvo como Aprovado ate a reposicao chegar.
 - **Produtos** com campos de TCG (jogo, colecao, numero, raridade, idioma,
   conservacao, foil) e calculo de margem e markup ao digitar.
 - **Estoque** com entrada, saida, ajuste de inventario, alerta de reposicao e

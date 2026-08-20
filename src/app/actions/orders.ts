@@ -58,6 +58,44 @@ function readItems(formData: FormData): ItemInput[] {
 }
 
 /**
+ * Verifica se ha estoque para faturar uma venda. Deixar o saldo negativo
+ * corromperia a valorizacao do estoque, entao o faturamento e bloqueado com
+ * uma mensagem que diz exatamente qual item falta - a mesma regra que ja vale
+ * para a saida manual de estoque.
+ */
+async function findStockShortages(
+  companyId: string,
+  items: Array<{ productId: string | null; quantity: number }>,
+): Promise<string[]> {
+  const problems: string[] = [];
+
+  // Agrupa por produto: o mesmo item pode aparecer em varias linhas do pedido.
+  const needed = new Map<string, number>();
+  for (const item of items) {
+    if (!item.productId) continue;
+    needed.set(item.productId, (needed.get(item.productId) ?? 0) + item.quantity);
+  }
+  if (needed.size === 0) return problems;
+
+  const products = await prisma.product.findMany({
+    where: { id: { in: Array.from(needed.keys()) }, companyId },
+    select: { id: true, name: true, stock: true, unit: true, trackStock: true },
+  });
+
+  for (const product of products) {
+    if (!product.trackStock) continue;
+    const quantity = needed.get(product.id) ?? 0;
+    if (quantity > product.stock) {
+      problems.push(
+        `${product.name}: o pedido pede ${quantity} ${product.unit} e ha ${product.stock} ${product.unit} em estoque.`,
+      );
+    }
+  }
+
+  return problems;
+}
+
+/**
  * Cria ou atualiza um pedido de venda/compra. Ao aprovar, gera as parcelas em
  * contas a receber/pagar e baixa o estoque (somente nas vendas).
  */
@@ -88,6 +126,15 @@ export async function saveOrderAction(_prev: OrderState, formData: FormData): Pr
   const issueDate = parseDateInput(String(formData.get('issueDate') ?? '')) ?? startOfToday();
   const installments = Math.max(1, Number(String(formData.get('installments') ?? '1')) || 1);
   const firstDueDate = parseDateInput(String(formData.get('firstDueDate') ?? '')) ?? issueDate;
+
+  if (status === 'BILLED' && type === 'SALE') {
+    const shortages = await findStockShortages(ctx.company.id, items);
+    if (shortages.length > 0) {
+      return {
+        error: `Estoque insuficiente para faturar. ${shortages.join(' ')} Registre a entrada em Estoque ou salve o pedido como Aprovado e fature depois.`,
+      };
+    }
+  }
 
   const base = {
     companyId: ctx.company.id,
@@ -203,8 +250,19 @@ export async function billOrderAction(formData: FormData) {
   const { ctx } = auth;
   const id = String(formData.get('id') ?? '');
 
-  const order = await prisma.order.findFirst({ where: { id, companyId: ctx.company.id } });
+  const order = await prisma.order.findFirst({
+    where: { id, companyId: ctx.company.id },
+    include: { items: { select: { productId: true, quantity: true } } },
+  });
   if (!order || order.status === 'BILLED' || order.status === 'CANCELED') return;
+
+  const slugForError = order.type === 'SALE' ? 'vendas' : 'compras';
+  if (order.type === 'SALE') {
+    const shortages = await findStockShortages(ctx.company.id, order.items);
+    if (shortages.length > 0) {
+      redirect(`/${slugForError}/${id}?erro=${encodeURIComponent(shortages.join(' '))}`);
+    }
+  }
 
   await prisma.order.update({ where: { id }, data: { status: 'BILLED' } });
   await billOrder(ctx.company.id, ctx.user.id, id);

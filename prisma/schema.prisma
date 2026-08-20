@@ -77,7 +77,6 @@ model Company {
   recurrences      Recurrence[]
   transfers        Transfer[]
   auditLogs        AuditLog[]
-  attachments      Attachment[]
 }
 
 model Membership {
@@ -325,7 +324,6 @@ model FinancialEntry {
   recurrence  Recurrence?           @relation(fields: [recurrenceId], references: [id])
   settlements Settlement[]
   matches     ReconciliationMatch[]
-  attachments Attachment[]
 
   @@index([companyId, kind, status])
   @@index([companyId, dueDate])
@@ -563,24 +561,8 @@ model ReconciliationRule {
 }
 
 // ---------------------------------------------------------------------------
-// Anexos e auditoria
+// Auditoria
 // ---------------------------------------------------------------------------
-
-model Attachment {
-  id        String   @id @default(cuid())
-  companyId String
-  entryId   String?
-  fileName  String
-  mimeType  String
-  size      Int
-  storedAs  String
-  createdAt DateTime @default(now())
-
-  company Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  entry   FinancialEntry? @relation(fields: [entryId], references: [id], onDelete: Cascade)
-
-  @@index([companyId])
-}
 
 model AuditLog {
   id        String   @id @default(cuid())

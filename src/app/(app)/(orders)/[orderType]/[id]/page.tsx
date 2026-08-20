@@ -12,10 +12,15 @@ import { resolveOrderType } from '../order-type';
 
 export const dynamic = 'force-dynamic';
 
-type Props = { params: Promise<{ orderType: string; id: string }> };
+type Props = {
+  params: Promise<{ orderType: string; id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
 
-export default async function OrderDetailPage({ params }: Props) {
+export default async function OrderDetailPage({ params, searchParams }: Props) {
   const { orderType, id } = await params;
+  const search = await searchParams;
+  const erro = Array.isArray(search.erro) ? search.erro[0] : search.erro;
   const config = resolveOrderType(orderType);
   const ctx = await requireContext();
 
@@ -69,6 +74,14 @@ export default async function OrderDetailPage({ params }: Props) {
           </>
         )}
       </PageHeader>
+
+      {erro && (
+        <div className="mb-5">
+          <Alert tone="danger" title="Nao foi possivel faturar">
+            {erro}
+          </Alert>
+        </div>
+      )}
 
       {hasSettlements && (
         <div className="mb-5">

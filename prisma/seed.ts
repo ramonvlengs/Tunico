@@ -101,7 +101,6 @@ async function main() {
   await prisma.bankImport.deleteMany();
   await prisma.reconciliationRule.deleteMany();
   await prisma.settlement.deleteMany();
-  await prisma.attachment.deleteMany();
   await prisma.financialEntry.deleteMany();
   await prisma.recurrence.deleteMany();
   await prisma.transfer.deleteMany();
