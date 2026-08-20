@@ -47,18 +47,45 @@ const POSITIVE_HINTS = [
   'estorno', 'rendimento', 'resgate', 'venda', 'liquidacao', 'liquidação', 'devolucao',
 ];
 
-const MONEY = String.raw`\(?-?\s?(?:R\$\s*)?\d{1,3}(?:\.\d{3})*,\d{2}\)?\s*[DCdc]?`;
+/**
+ * Valor monetario brasileiro. O sufixo D/C so e aceito quando nao emenda em
+ * outra palavra: extratos em PDF costumam perder os espacos entre as colunas,
+ * e sem essa guarda o "C" de "Compra" seria lido como marcador de credito.
+ */
+const MONEY = String.raw`\(?-?\s?(?:R\$\s*)?\d{1,3}(?:\.\d{3})*,\d{2}\)?(?:\s?[DCdc](?![A-Za-zÀ-ÿ]))?`;
 const MONEY_RE = new RegExp(MONEY, 'g');
-const DATE_START_RE = /^(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)\s+(.*)$/;
 
-/** Extrai o texto do PDF. pdf-parse e carregado sob demanda (Node-only). */
+/**
+ * Linha de lancamento: comeca com a data. O espaco depois dela e opcional
+ * porque a extracao de texto do PDF frequentemente cola as colunas
+ * ("03/07/2025PIX RECEBIDO1.250,006.250,00").
+ */
+const DATE_START_RE = /^(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)\s*(.*)$/;
+
+/**
+ * Extrai o texto do PDF.
+ *
+ * pdf-parse e CommonJS e, dependendo do bundler, `await import()` devolve a
+ * funcao em `default`, em `default.default` ou no proprio namespace - por isso
+ * o desempacotamento defensivo abaixo.
+ */
 async function extractText(buffer: Buffer): Promise<string> {
-  // Import dinamico: pdf-parse executa codigo de teste ao ser importado no topo
-  // em alguns bundlers, e so deve rodar no servidor.
-  const mod = await import('pdf-parse');
-  const pdfParse = (mod as unknown as { default: (b: Buffer) => Promise<{ text: string; numpages: number }> }).default ?? (mod as never);
-  const result = await (pdfParse as (b: Buffer) => Promise<{ text: string; numpages: number }>)(buffer);
-  return result.text ?? '';
+  type PdfParseFn = (data: Buffer, options?: Record<string, unknown>) => Promise<{ text: string }>;
+
+  const mod: unknown = await import('pdf-parse');
+  const candidates: unknown[] = [
+    mod,
+    (mod as { default?: unknown }).default,
+    ((mod as { default?: { default?: unknown } }).default ?? {}).default,
+  ];
+  const pdfParse = candidates.find((candidate) => typeof candidate === 'function') as PdfParseFn | undefined;
+
+  if (!pdfParse) {
+    throw new Error('pdf-parse nao expos uma funcao chamavel.');
+  }
+
+  const result = await pdfParse(buffer);
+  return result?.text ?? '';
 }
 
 function isNoise(line: string): boolean {
@@ -87,7 +114,8 @@ export async function parsePdfStatement(buffer: Buffer): Promise<ParsedStatement
   let text: string;
   try {
     text = await extractText(buffer);
-  } catch {
+  } catch (error) {
+    console.error('[parsePdfStatement] falha ao extrair texto do PDF:', error);
     throw new StatementParseError(
       'Nao foi possivel ler o PDF. Se o arquivo for digitalizado (imagem), o texto nao pode ser extraido - exporte o extrato em OFX, Excel ou CSV.',
     );
@@ -136,31 +164,32 @@ export async function parsePdfStatement(buffer: Buffer): Promise<ParsedStatement
 
     const rest = dateMatch[2];
     MONEY_RE.lastIndex = 0;
-    const monies = rest.match(MONEY_RE);
-    if (!monies || monies.length === 0) continue;
+    // Guardamos tambem a posicao de cada valor: usar indexOf sobre o texto
+    // quebra quando a descricao contem o mesmo numero do valor.
+    const monies = Array.from(rest.matchAll(MONEY_RE)).map((match) => ({
+      text: match[0],
+      index: match.index ?? 0,
+    }));
+    if (monies.length === 0) continue;
 
-    // Ultima ocorrencia costuma ser o saldo quando ha 2+ valores na linha.
-    let amountRaw = monies[monies.length - 1];
-    let balanceRaw: string | null = null;
-    if (monies.length >= 2) {
-      amountRaw = monies[monies.length - 2];
-      balanceRaw = monies[monies.length - 1];
-    }
+    // Com dois ou mais valores na linha, o ultimo e o saldo apos o lancamento.
+    const amountToken = monies.length >= 2 ? monies[monies.length - 2] : monies[monies.length - 1];
+    const balanceToken = monies.length >= 2 ? monies[monies.length - 1] : null;
 
-    const amountAbs = parseBrazilianAmount(amountRaw);
-    if (amountAbs === null || amountAbs === 0) continue;
+    const parsedAmount = parseBrazilianAmount(amountToken.text);
+    if (parsedAmount === null || parsedAmount === 0) continue;
 
     const description = rest
-      .slice(0, rest.indexOf(amountRaw) >= 0 ? rest.indexOf(amountRaw) : rest.length)
+      .slice(0, amountToken.index)
       .replace(/\s+/g, ' ')
-      .replace(/[.\-–—]+$/, '')
+      .replace(/[.\-\u2013\u2014]+$/, '')
       .trim();
 
     if (!description || description.length < 2) continue;
 
-    const explicitlySigned = /^\(|^-|\s-\s?\d/.test(amountRaw.trim()) || amountAbs < 0;
-    const sign = explicitlySigned && amountAbs < 0 ? 1 : guessSign(description, amountRaw);
-    const amount = amountAbs < 0 ? amountAbs : amountAbs * sign;
+    // Quando o proprio valor ja traz o sinal (-, parenteses ou D/C) ele manda;
+    // caso contrario o sentido e deduzido pelo historico.
+    const amount = parsedAmount < 0 ? parsedAmount : parsedAmount * guessSign(description, amountToken.text);
 
     transactions.push({
       date,
@@ -168,7 +197,7 @@ export async function parsePdfStatement(buffer: Buffer): Promise<ParsedStatement
       description: description.slice(0, 240),
       memo: null,
       documentNumber: null,
-      balanceAfter: balanceRaw ? parseBrazilianAmount(balanceRaw) : null,
+      balanceAfter: balanceToken ? parseBrazilianAmount(balanceToken.text) : null,
       fitId: null,
     });
   }
