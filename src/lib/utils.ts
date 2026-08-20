@@ -88,10 +88,13 @@ export function addDaysUTC(d: Date, days: number): Date {
   return copy;
 }
 
+/** "ago/26" - compacto o suficiente para caber nos eixos dos graficos. */
 export function monthLabel(d: Date): string {
-  return new Intl.DateTimeFormat('pt-BR', { month: 'short', year: '2-digit', timeZone: 'UTC' })
+  const month = new Intl.DateTimeFormat('pt-BR', { month: 'short', timeZone: 'UTC' })
     .format(d)
     .replace('.', '');
+  const year = String(d.getUTCFullYear()).slice(2);
+  return `${month}/${year}`;
 }
 
 /** Remove acentos e baixa a caixa - usado em buscas e matching de conciliacao. */

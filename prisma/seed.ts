@@ -208,19 +208,19 @@ async function seedCompany(companyId: string, isMatriz: boolean) {
   );
 
   const caixa = await prisma.bankAccount.create({
-    data: { companyId, name: 'Caixa da loja', type: 'CASH', initialBalance: round2(1200 * scale), color: '#16a34a', openingDate: d(2024, 1, 1) },
+    data: { companyId, name: 'Caixa da loja', type: 'CASH', initialBalance: round2(3500 * scale), color: '#16a34a', openingDate: d(2024, 1, 1) },
   });
   const itau = await prisma.bankAccount.create({
     data: {
       companyId, name: 'Itau - Conta corrente', type: 'CHECKING', bankCode: '341', bankName: 'Itau Unibanco',
       agency: '1234', accountNumber: '56789-0', pixKey: 'contato@tunicotcg.com.br',
-      initialBalance: round2(18500 * scale), color: '#f97316', openingDate: d(2024, 1, 1),
+      initialBalance: round2(62000 * scale), color: '#f97316', openingDate: d(2024, 1, 1),
     },
   });
   const nubank = await prisma.bankAccount.create({
     data: {
       companyId, name: 'Nubank PJ', type: 'DIGITAL', bankCode: '260', bankName: 'Nu Pagamentos',
-      agency: '0001', accountNumber: '9876543-2', initialBalance: round2(7400 * scale), color: '#8b5cf6', openingDate: d(2024, 1, 1),
+      agency: '0001', accountNumber: '9876543-2', initialBalance: round2(18400 * scale), color: '#8b5cf6', openingDate: d(2024, 1, 1),
     },
   });
   const mercadoPago = await prisma.bankAccount.create({
@@ -354,17 +354,19 @@ async function seedCompany(companyId: string, isMatriz: boolean) {
   for (let offset = -7; offset <= 1; offset++) {
     const monthStart = addMonths(currentMonth, offset);
     const isFuture = offset > 0;
-    const salesCount = Math.max(2, Math.round((isFuture ? 3 : 10) * scale + rnd() * 4));
+    // Volume mensal calibrado para uma loja com faturamento saudavel:
+    // ~30 pedidos/mes na matriz, com ticket medio puxado pelos itens lacrados.
+    const salesCount = Math.max(3, Math.round((isFuture ? 9 : 30) * scale + rnd() * 6));
 
     for (let i = 0; i < salesCount; i++) {
       const customer = pick(customers);
       const method = pick(methods);
       const issueDate = new Date(monthStart.getTime() + Math.floor(rnd() * 26) * 86400000);
-      const itemCount = 1 + Math.floor(rnd() * 3);
+      const itemCount = 1 + Math.floor(rnd() * 4);
       const chosen = Array.from({ length: itemCount }, () => pick(products));
 
       const items = chosen.map((product) => {
-        const quantity = product.group === 'Singles' ? 1 : 1 + Math.floor(rnd() * 2);
+        const quantity = product.group === 'Singles' ? 1 : 1 + Math.floor(rnd() * 3);
         const unitPrice = product.salePrice;
         const discount = rnd() > 0.75 ? round2(unitPrice * quantity * 0.05) : 0;
         return {

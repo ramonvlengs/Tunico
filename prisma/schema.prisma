@@ -127,6 +127,7 @@ model Contact {
   entries    FinancialEntry[]
   orders     Order[]
   reconRules ReconciliationRule[]
+  Recurrence Recurrence[]
 
   @@index([companyId, kind])
   @@index([companyId, name])
@@ -152,6 +153,7 @@ model Category {
   children   Category[]           @relation("CategoryTree")
   entries    FinancialEntry[]
   reconRules ReconciliationRule[]
+  Recurrence Recurrence[]
 
   @@index([companyId, type])
 }
@@ -165,8 +167,9 @@ model CostCenter {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  company Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  entries FinancialEntry[]
+  company     Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  entries     FinancialEntry[]
+  recurrences Recurrence[]
 
   @@index([companyId])
 }
@@ -197,6 +200,7 @@ model BankAccount {
   paymentMethods   PaymentMethod[]
   transfersOut     Transfer[]        @relation("TransferFrom")
   transfersIn      Transfer[]        @relation("TransferTo")
+  recurrences      Recurrence[]
 
   @@index([companyId])
 }
@@ -376,8 +380,12 @@ model Recurrence {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  company Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  entries FinancialEntry[]
+  company     Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  contact     Contact?         @relation(fields: [contactId], references: [id])
+  category    Category?        @relation(fields: [categoryId], references: [id])
+  costCenter  CostCenter?      @relation(fields: [costCenterId], references: [id])
+  bankAccount BankAccount?     @relation(fields: [bankAccountId], references: [id])
+  entries     FinancialEntry[]
 
   @@index([companyId, isActive])
 }
