@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="TunicoTCG Control">
+  <defs>
+    <radialGradient id="badge" cx="38%" cy="30%" r="82%">
+      <stop offset="0%" stop-color="#4ade80"/>
+      <stop offset="55%" stop-color="#16a34a"/>
+      <stop offset="100%" stop-color="#0b5d2a"/>
+    </radialGradient>
+    <linearGradient id="skin" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#a3e635"/>
+      <stop offset="100%" stop-color="#3f9142"/>
+    </linearGradient>
+    <linearGradient id="cap" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fb923c"/>
+      <stop offset="100%" stop-color="#dc2626"/>
+    </linearGradient>
+    <linearGradient id="cardA" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fef3c7"/>
+      <stop offset="100%" stop-color="#fbbf24"/>
+    </linearGradient>
+    <linearGradient id="cardB" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#bfdbfe"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
+    </linearGradient>
+    <linearGradient id="cardC" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fecaca"/>
+      <stop offset="100%" stop-color="#ef4444"/>
+    </linearGradient>
+  </defs>
+
+  <circle cx="256" cy="256" r="248" fill="#062e15"/>
+  <circle cx="256" cy="256" r="236" fill="url(#badge)"/>
+  <circle cx="256" cy="256" r="236" fill="none" stroke="#052e16" stroke-width="10" opacity=".5"/>
+
+  <!-- leque de cartas -->
+  <g transform="translate(256 322)">
+    <g transform="rotate(-24) translate(-104 -34)">
+      <rect width="96" height="132" rx="12" fill="url(#cardC)" stroke="#7f1d1d" stroke-width="6"/>
+      <rect x="14" y="16" width="68" height="66" rx="7" fill="#fff" opacity=".65"/>
+      <rect x="14" y="94" width="52" height="9" rx="4.5" fill="#7f1d1d" opacity=".6"/>
+    </g>
+    <g transform="rotate(24) translate(8 -34)">
+      <rect width="96" height="132" rx="12" fill="url(#cardB)" stroke="#1e3a8a" stroke-width="6"/>
+      <rect x="14" y="16" width="68" height="66" rx="7" fill="#fff" opacity=".65"/>
+      <rect x="14" y="94" width="52" height="9" rx="4.5" fill="#1e3a8a" opacity=".6"/>
+    </g>
+    <g transform="translate(-48 -56)">
+      <rect width="96" height="140" rx="12" fill="url(#cardA)" stroke="#92400e" stroke-width="6"/>
+      <rect x="14" y="16" width="68" height="70" rx="7" fill="#fff" opacity=".7"/>
+      <path d="M30 74 L48 44 L66 74 Z" fill="#92400e" opacity=".55"/>
+      <rect x="14" y="98" width="60" height="9" rx="4.5" fill="#92400e" opacity=".6"/>
+      <rect x="14" y="114" width="40" height="9" rx="4.5" fill="#92400e" opacity=".4"/>
+    </g>
+  </g>
+
+  <!-- mascote -->
+  <g transform="translate(256 196)">
+    <ellipse cx="0" cy="12" rx="112" ry="100" fill="url(#skin)" stroke="#14532d" stroke-width="9"/>
+    <ellipse cx="0" cy="52" rx="66" ry="40" fill="#ecfccb" opacity=".55"/>
+    <circle cx="-44" cy="-24" r="34" fill="#ffffff" stroke="#14532d" stroke-width="8"/>
+    <circle cx="44" cy="-24" r="34" fill="#ffffff" stroke="#14532d" stroke-width="8"/>
+    <circle cx="-38" cy="-20" r="15" fill="#111827"/>
+    <circle cx="50" cy="-20" r="15" fill="#111827"/>
+    <circle cx="-33" cy="-26" r="5" fill="#ffffff"/>
+    <circle cx="55" cy="-26" r="5" fill="#ffffff"/>
+    <path d="M-46 44 Q0 82 46 44" fill="none" stroke="#14532d" stroke-width="10" stroke-linecap="round"/>
+    <circle cx="-72" cy="34" r="12" fill="#f87171" opacity=".45"/>
+    <circle cx="72" cy="34" r="12" fill="#f87171" opacity=".45"/>
+    <!-- bone -->
+    <path d="M-116 -54 Q0 -136 116 -54 Q0 -104 -116 -54 Z" fill="url(#cap)" stroke="#7f1d1d" stroke-width="8" stroke-linejoin="round"/>
+    <path d="M-118 -52 Q0 -74 118 -52 L118 -38 Q0 -60 -118 -38 Z" fill="#991b1b"/>
+    <circle cx="0" cy="-108" r="14" fill="#fbbf24" stroke="#7f1d1d" stroke-width="7"/>
+  </g>
+
+  <!-- faixa TUNICO TCG -->
+  <g>
+    <path d="M76 402 h360 a16 16 0 0 1 16 16 v34 a16 16 0 0 1 -16 16 h-360 a16 16 0 0 1 -16 -16 v-34 a16 16 0 0 1 16 -16 z" fill="#052e16" opacity=".92"/>
+    <text x="256" y="443" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="34" font-weight="bold" fill="#fde68a" letter-spacing="4">TUNICO TCG</text>
+  </g>
+</svg>

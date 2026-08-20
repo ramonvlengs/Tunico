@@ -1,0 +1,44 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 817 >>
+stream
+BT /F1 9 Tf 12 TL 40 760 Td
+(Banco Exemplo S.A.  -  Extrato de Conta Corrente) Tj T*
+(Agencia 1234   Conta 56789-0   Periodo: 01/07/2025 a 31/07/2025) Tj T*
+() Tj T*
+(Data       Historico                                  Valor        Saldo) Tj T*
+(01/07/2025 SALDO ANTERIOR                                        5.000,00) Tj T*
+(03/07/2025 PIX RECEBIDO JOAO DA SILVA               1.250,00    6.250,00) Tj T*
+(05/07/2025 PAGAMENTO FORNECEDOR CARD DISTRIB          389,90    5.860,10) Tj T*
+(10/07/2025 TARIFA PACOTE DE SERVICOS                   29,90    5.830,20) Tj T*
+(15/07/2025 TED RECEBIDA MERCADO PAGO LTDA           4.500,00   10.330,20) Tj T*
+(22/07/2025 COMPRA CARTAO DEBITO CORREIOS              112,45   10.217,75) Tj T*
+(31/07/2025 SALDO FINAL                                         10.217,75) Tj T*
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000241 00000 n 
+0000001109 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+1177
+%%EOF

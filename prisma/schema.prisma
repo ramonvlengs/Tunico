@@ -1,0 +1,593 @@
+// TunicoTCG Control - ERP Financeiro
+// Schema Prisma. Provider padrao: SQLite (dev). Para producao troque para
+// postgresql e ajuste a DATABASE_URL. Nenhum tipo exclusivo de SQLite e usado.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Acesso: usuarios, empresas (multi-CNPJ) e vinculos
+// ---------------------------------------------------------------------------
+
+model User {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  phone        String?
+  avatarUrl    String?
+  isActive     Boolean   @default(true)
+  isSuperAdmin Boolean   @default(false)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  memberships Membership[]
+  auditLogs   AuditLog[]
+  bankImports BankImport[]
+  stockMoves  StockMovement[]
+
+  @@index([email])
+}
+
+model Company {
+  id            String   @id @default(cuid())
+  corporateName String // Razao social
+  tradeName     String // Nome fantasia
+  cnpj          String   @unique
+  stateReg      String? // Inscricao estadual
+  cityReg       String? // Inscricao municipal
+  taxRegime     String   @default("SIMPLES_NACIONAL") // SIMPLES_NACIONAL | LUCRO_PRESUMIDO | LUCRO_REAL | MEI
+  email         String?
+  phone         String?
+  website       String?
+  logoUrl       String?
+  zipCode       String?
+  street        String?
+  number        String?
+  complement    String?
+  district      String?
+  city          String?
+  state         String?
+  color         String   @default("#16a34a")
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  memberships      Membership[]
+  contacts         Contact[]
+  categories       Category[]
+  costCenters      CostCenter[]
+  bankAccounts     BankAccount[]
+  paymentMethods   PaymentMethod[]
+  products         Product[]
+  entries          FinancialEntry[]
+  settlements      Settlement[]
+  orders           Order[]
+  bankTransactions BankTransaction[]
+  bankImports      BankImport[]
+  reconRules       ReconciliationRule[]
+  stockMovements   StockMovement[]
+  recurrences      Recurrence[]
+  transfers        Transfer[]
+  auditLogs        AuditLog[]
+  attachments      Attachment[]
+}
+
+model Membership {
+  id        String   @id @default(cuid())
+  userId    String
+  companyId String
+  role      String   @default("VIEWER") // OWNER | ADMIN | FINANCE | OPERATOR | VIEWER
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, companyId])
+  @@index([companyId])
+}
+
+// ---------------------------------------------------------------------------
+// Cadastros
+// ---------------------------------------------------------------------------
+
+model Contact {
+  id          String   @id @default(cuid())
+  companyId   String
+  kind        String   @default("CUSTOMER") // CUSTOMER | SUPPLIER | BOTH | EMPLOYEE
+  personType  String   @default("PF") // PF | PJ | FOREIGN
+  name        String
+  tradeName   String?
+  document    String? // CPF ou CNPJ
+  stateReg    String?
+  email       String?
+  phone       String?
+  whatsapp    String?
+  zipCode     String?
+  street      String?
+  number      String?
+  complement  String?
+  district    String?
+  city        String?
+  state       String?
+  notes       String?
+  creditLimit Float    @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company    Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  entries    FinancialEntry[]
+  orders     Order[]
+  reconRules ReconciliationRule[]
+
+  @@index([companyId, kind])
+  @@index([companyId, name])
+  @@index([companyId, document])
+}
+
+/// Plano de contas / categorias financeiras (hierarquico)
+model Category {
+  id        String   @id @default(cuid())
+  companyId String
+  parentId  String?
+  code      String?
+  name      String
+  type      String   @default("EXPENSE") // INCOME | EXPENSE
+  dreGroup  String? // RECEITA_BRUTA | DEDUCOES | CMV | DESPESA_OPERACIONAL | DESPESA_ADMIN | DESPESA_FINANCEIRA | OUTRAS_RECEITAS | INVESTIMENTO | IMPOSTOS
+  color     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company    Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  parent     Category?            @relation("CategoryTree", fields: [parentId], references: [id])
+  children   Category[]           @relation("CategoryTree")
+  entries    FinancialEntry[]
+  reconRules ReconciliationRule[]
+
+  @@index([companyId, type])
+}
+
+model CostCenter {
+  id        String   @id @default(cuid())
+  companyId String
+  code      String?
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  entries FinancialEntry[]
+
+  @@index([companyId])
+}
+
+model BankAccount {
+  id             String    @id @default(cuid())
+  companyId      String
+  name           String
+  type           String    @default("CHECKING") // CHECKING | SAVINGS | CASH | DIGITAL | CREDIT_CARD | INVESTMENT
+  bankCode       String?
+  bankName       String?
+  agency         String?
+  accountNumber  String?
+  pixKey         String?
+  initialBalance Float     @default(0)
+  openingDate    DateTime?
+  color          String    @default("#16a34a")
+  includeInCash  Boolean   @default(true)
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  company          Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  entries          FinancialEntry[]
+  settlements      Settlement[]
+  bankTransactions BankTransaction[]
+  bankImports      BankImport[]
+  paymentMethods   PaymentMethod[]
+  transfersOut     Transfer[]        @relation("TransferFrom")
+  transfersIn      Transfer[]        @relation("TransferTo")
+
+  @@index([companyId])
+}
+
+model PaymentMethod {
+  id             String   @id @default(cuid())
+  companyId      String
+  name           String
+  type           String   @default("PIX") // CASH | PIX | CREDIT_CARD | DEBIT_CARD | BOLETO | TRANSFER | CHECK | OTHER
+  feePercent     Float    @default(0)
+  feeFixed       Float    @default(0)
+  settlementDays Int      @default(0)
+  bankAccountId  String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  company     Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  bankAccount BankAccount? @relation(fields: [bankAccountId], references: [id])
+  settlements Settlement[]
+  orders      Order[]
+
+  @@index([companyId])
+}
+
+model Product {
+  id           String   @id @default(cuid())
+  companyId    String
+  sku          String?
+  name         String
+  description  String?
+  type         String   @default("PRODUCT") // PRODUCT | SERVICE
+  unit         String   @default("UN")
+  group        String? // Categoria comercial: Singles, Booster Box, Deck, Acessorio...
+  barcode      String?
+  ncm          String?
+  costPrice    Float    @default(0)
+  salePrice    Float    @default(0)
+  stock        Float    @default(0)
+  minStock     Float    @default(0)
+  trackStock   Boolean  @default(true)
+  // Campos especificos de TCG
+  tcgGame      String? // Pokemon, Magic, Yu-Gi-Oh, One Piece...
+  tcgSet       String?
+  tcgNumber    String?
+  tcgRarity    String?
+  tcgLanguage  String?
+  tcgCondition String? // NM, SP, MP, HP, DMG
+  tcgFoil      Boolean  @default(false)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  company    Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  orderItems OrderItem[]
+  movements  StockMovement[]
+
+  @@index([companyId, name])
+  @@index([companyId, sku])
+}
+
+model StockMovement {
+  id        String   @id @default(cuid())
+  companyId String
+  productId String
+  type      String // IN | OUT | ADJUST
+  quantity  Float
+  unitCost  Float    @default(0)
+  balance   Float    @default(0)
+  reason    String?
+  refType   String? // ORDER | MANUAL | IMPORT
+  refId     String?
+  userId    String?
+  createdAt DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id])
+
+  @@index([companyId, productId])
+}
+
+// ---------------------------------------------------------------------------
+// Financeiro: contas a pagar / receber, baixas, recorrencias, transferencias
+// ---------------------------------------------------------------------------
+
+model FinancialEntry {
+  id             String   @id @default(cuid())
+  companyId      String
+  kind           String // RECEIVABLE | PAYABLE
+  description    String
+  contactId      String?
+  categoryId     String?
+  costCenterId   String?
+  bankAccountId  String? // conta prevista para liquidacao
+  orderId        String?
+  recurrenceId   String?
+  documentNumber String?
+  issueDate      DateTime @default(now())
+  competenceDate DateTime @default(now())
+  dueDate        DateTime
+  amount         Float
+  paidAmount     Float    @default(0)
+  discount       Float    @default(0)
+  interest       Float    @default(0)
+  fine           Float    @default(0)
+  status         String   @default("OPEN") // OPEN | PARTIAL | PAID | CANCELED
+  installment    Int      @default(1)
+  installments   Int      @default(1)
+  groupId        String? // agrupa parcelas do mesmo lancamento
+  notes          String?
+  tags           String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  company     Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  contact     Contact?              @relation(fields: [contactId], references: [id])
+  category    Category?             @relation(fields: [categoryId], references: [id])
+  costCenter  CostCenter?           @relation(fields: [costCenterId], references: [id])
+  bankAccount BankAccount?          @relation(fields: [bankAccountId], references: [id])
+  order       Order?                @relation(fields: [orderId], references: [id])
+  recurrence  Recurrence?           @relation(fields: [recurrenceId], references: [id])
+  settlements Settlement[]
+  matches     ReconciliationMatch[]
+  attachments Attachment[]
+
+  @@index([companyId, kind, status])
+  @@index([companyId, dueDate])
+  @@index([groupId])
+}
+
+/// Baixa (liquidacao total ou parcial) de um lancamento
+model Settlement {
+  id              String   @id @default(cuid())
+  companyId       String
+  entryId         String
+  bankAccountId   String
+  paymentMethodId String?
+  paidAt          DateTime
+  amount          Float
+  discount        Float    @default(0)
+  interest        Float    @default(0)
+  fine            Float    @default(0)
+  fee             Float    @default(0)
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  company       Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  entry         FinancialEntry        @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  bankAccount   BankAccount           @relation(fields: [bankAccountId], references: [id])
+  paymentMethod PaymentMethod?        @relation(fields: [paymentMethodId], references: [id])
+  matches       ReconciliationMatch[]
+
+  @@index([companyId, paidAt])
+  @@index([entryId])
+}
+
+model Recurrence {
+  id             String    @id @default(cuid())
+  companyId      String
+  kind           String // RECEIVABLE | PAYABLE
+  description    String
+  amount         Float
+  contactId      String?
+  categoryId     String?
+  costCenterId   String?
+  bankAccountId  String?
+  frequency      String    @default("MONTHLY") // WEEKLY | BIWEEKLY | MONTHLY | BIMONTHLY | QUARTERLY | SEMIANNUAL | YEARLY
+  interval       Int       @default(1)
+  dayOfMonth     Int       @default(1)
+  startDate      DateTime
+  endDate        DateTime?
+  nextRunAt      DateTime
+  occurrences    Int? // limite de geracoes (null = infinito)
+  generatedCount Int       @default(0)
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  company Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  entries FinancialEntry[]
+
+  @@index([companyId, isActive])
+}
+
+model Transfer {
+  id            String   @id @default(cuid())
+  companyId     String
+  fromAccountId String
+  toAccountId   String
+  amount        Float
+  fee           Float    @default(0)
+  date          DateTime
+  description   String?
+  createdAt     DateTime @default(now())
+
+  company     Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  fromAccount BankAccount @relation("TransferFrom", fields: [fromAccountId], references: [id])
+  toAccount   BankAccount @relation("TransferTo", fields: [toAccountId], references: [id])
+
+  @@index([companyId, date])
+}
+
+// ---------------------------------------------------------------------------
+// Vendas e compras
+// ---------------------------------------------------------------------------
+
+model Order {
+  id              String    @id @default(cuid())
+  companyId       String
+  type            String // SALE | PURCHASE
+  number          Int
+  contactId       String?
+  status          String    @default("DRAFT") // DRAFT | OPEN | APPROVED | BILLED | CANCELED
+  issueDate       DateTime  @default(now())
+  deliveryDate    DateTime?
+  paymentMethodId String?
+  installments    Int       @default(1)
+  firstDueDate    DateTime?
+  subtotal        Float     @default(0)
+  discount        Float     @default(0)
+  shipping        Float     @default(0)
+  total           Float     @default(0)
+  notes           String?
+  channel         String? // Loja fisica, Ligamagic, Marketplace, Live, Evento...
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  company       Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  contact       Contact?         @relation(fields: [contactId], references: [id])
+  paymentMethod PaymentMethod?   @relation(fields: [paymentMethodId], references: [id])
+  items         OrderItem[]
+  entries       FinancialEntry[]
+
+  @@unique([companyId, type, number])
+  @@index([companyId, type, status])
+}
+
+model OrderItem {
+  id          String  @id @default(cuid())
+  orderId     String
+  productId   String?
+  description String
+  quantity    Float   @default(1)
+  unitPrice   Float   @default(0)
+  discount    Float   @default(0)
+  total       Float   @default(0)
+
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+}
+
+// ---------------------------------------------------------------------------
+// Conciliacao bancaria
+// ---------------------------------------------------------------------------
+
+model BankImport {
+  id             String    @id @default(cuid())
+  companyId      String
+  bankAccountId  String
+  userId         String?
+  fileName       String
+  fileType       String // OFX | XLSX | CSV | PDF
+  fileSize       Int       @default(0)
+  periodStart    DateTime?
+  periodEnd      DateTime?
+  parsedCount    Int       @default(0)
+  importedCount  Int       @default(0)
+  duplicateCount Int       @default(0)
+  status         String    @default("DONE") // DONE | PARTIAL | FAILED
+  message        String?
+  meta           String? // JSON com metadados do arquivo (banco, conta, saldo)
+  createdAt      DateTime  @default(now())
+
+  company          Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  bankAccount      BankAccount       @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
+  user             User?             @relation(fields: [userId], references: [id])
+  bankTransactions BankTransaction[]
+
+  @@index([companyId, createdAt])
+}
+
+model BankTransaction {
+  id             String    @id @default(cuid())
+  companyId      String
+  bankAccountId  String
+  importId       String?
+  fitId          String? // identificador unico do OFX
+  hash           String // hash de deduplicacao (conta+data+valor+descricao)
+  date           DateTime
+  amount         Float // positivo = credito, negativo = debito
+  direction      String // IN | OUT
+  description    String
+  memo           String?
+  documentNumber String?
+  balanceAfter   Float?
+  status         String    @default("PENDING") // PENDING | RECONCILED | IGNORED
+  reconciledAt   DateTime?
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  company     Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  bankAccount BankAccount           @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
+  import      BankImport?           @relation(fields: [importId], references: [id])
+  matches     ReconciliationMatch[]
+
+  @@unique([bankAccountId, hash])
+  @@index([companyId, status])
+  @@index([bankAccountId, date])
+}
+
+/// Liga uma transacao do extrato a um lancamento financeiro (e sua baixa)
+model ReconciliationMatch {
+  id                String   @id @default(cuid())
+  bankTransactionId String
+  entryId           String
+  settlementId      String?
+  amount            Float
+  score             Float    @default(0)
+  method            String   @default("MANUAL") // AUTO | MANUAL | RULE | CREATED
+  createdAt         DateTime @default(now())
+
+  bankTransaction BankTransaction @relation(fields: [bankTransactionId], references: [id], onDelete: Cascade)
+  entry           FinancialEntry  @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  settlement      Settlement?     @relation(fields: [settlementId], references: [id])
+
+  @@unique([bankTransactionId, entryId])
+  @@index([entryId])
+}
+
+/// Regras para classificar automaticamente transacoes importadas
+model ReconciliationRule {
+  id         String   @id @default(cuid())
+  companyId  String
+  name       String
+  pattern    String // texto contido na descricao (case-insensitive)
+  direction  String? // IN | OUT | null (ambos)
+  minAmount  Float?
+  maxAmount  Float?
+  categoryId String?
+  contactId  String?
+  priority   Int      @default(0)
+  autoCreate Boolean  @default(false) // cria lancamento automaticamente
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  company  Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  category Category? @relation(fields: [categoryId], references: [id])
+  contact  Contact?  @relation(fields: [contactId], references: [id])
+
+  @@index([companyId, isActive])
+}
+
+// ---------------------------------------------------------------------------
+// Anexos e auditoria
+// ---------------------------------------------------------------------------
+
+model Attachment {
+  id        String   @id @default(cuid())
+  companyId String
+  entryId   String?
+  fileName  String
+  mimeType  String
+  size      Int
+  storedAs  String
+  createdAt DateTime @default(now())
+
+  company Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  entry   FinancialEntry? @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  companyId String?
+  userId    String?
+  action    String // CREATE | UPDATE | DELETE | LOGIN | IMPORT | SETTLE | RECONCILE
+  entity    String
+  entityId  String?
+  summary   String?
+  payload   String?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  company Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user    User?    @relation(fields: [userId], references: [id])
+
+  @@index([companyId, createdAt])
+}
