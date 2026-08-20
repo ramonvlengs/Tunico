@@ -164,8 +164,22 @@ export async function saveUserAction(_prev: UserState, formData: FormData): Prom
   }
 
   if (userId) {
-    const target = await prisma.user.findUnique({ where: { id: userId } });
-    if (!target) return { error: 'Usuario nao encontrado.' };
+    // So e possivel editar quem ja pertence a empresa ativa. Sem essa checagem,
+    // um administrador poderia trocar a senha de um usuario de outra empresa.
+    const membership = await prisma.membership.findUnique({
+      where: { userId_companyId: { userId, companyId: ctx.company.id } },
+      include: { user: true },
+    });
+    if (!membership) return { error: 'Usuario nao encontrado nesta empresa.' };
+    if (membership.role === 'OWNER' && ctx.role !== 'OWNER') {
+      return { error: 'Somente o proprietario pode editar outro proprietario.' };
+    }
+
+    // E-mail e unico no sistema inteiro, entao o conflito precisa de mensagem.
+    if (email !== membership.user.email) {
+      const taken = await prisma.user.findUnique({ where: { email } });
+      if (taken) return { error: 'Ja existe outro usuario com este e-mail.' };
+    }
 
     await prisma.user.update({
       where: { id: userId },
@@ -177,10 +191,9 @@ export async function saveUserAction(_prev: UserState, formData: FormData): Prom
         ...(password ? { passwordHash: await hashPassword(password) } : {}),
       },
     });
-    await prisma.membership.upsert({
-      where: { userId_companyId: { userId, companyId: ctx.company.id } },
-      create: { userId, companyId: ctx.company.id, role },
-      update: { role },
+    await prisma.membership.update({
+      where: { id: membership.id },
+      data: { role },
     });
   } else {
     if (password.length < 8) return { error: 'A senha inicial deve ter no minimo 8 caracteres.' };

@@ -84,11 +84,16 @@ export async function saveContactAction(_prev: FormState, formData: FormData): P
     isActive: bool(formData, 'isActive'),
   };
 
-  const contact = id
-    ? await prisma.contact.update({ where: { id }, data }).catch(() => null)
-    : await prisma.contact.create({ data });
-
-  if (!contact) return fail('Contato nao encontrado.');
+  let contact;
+  if (id) {
+    // Confere a empresa dona antes de escrever: sem isso, um ID de outra
+    // empresa seria atualizado e ainda migraria para a empresa ativa.
+    const existing = await prisma.contact.findFirst({ where: { id, companyId: ctx.company.id } });
+    if (!existing) return fail('Contato nao encontrado.');
+    contact = await prisma.contact.update({ where: { id }, data });
+  } else {
+    contact = await prisma.contact.create({ data });
+  }
 
   await audit({
     companyId: ctx.company.id, userId: ctx.user.id, action: id ? 'UPDATE' : 'CREATE',
