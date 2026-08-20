@@ -1,4 +1,4 @@
-import { requireContext } from '@/lib/tenant';
+import { requirePermission } from '@/lib/tenant';
 import { prisma } from '@/lib/prisma';
 import { formatDateTime } from '@/lib/utils';
 import { Card, EmptyState, PageHeader, Pill } from '@/components/ui/primitives';
@@ -40,7 +40,7 @@ export default async function AuditPage({
     return Array.isArray(value) ? value[0] : value;
   };
 
-  const ctx = await requireContext();
+  const ctx = await requirePermission('audit.read');
   const page = Math.max(1, Number(get('page') ?? '1') || 1);
   const action = get('action');
   const q = get('q');

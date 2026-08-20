@@ -226,6 +226,11 @@ export function AppShell({
           </form>
 
           <div className="ml-auto flex items-center gap-1.5">
+            {/* No mobile a barra de busca da toolbar some; este atalho a substitui. */}
+            <Link href="/busca" className="btn-ghost p-2 md:hidden" aria-label="Buscar">
+              <Search size={18} />
+            </Link>
+
             <Link
               href="/conciliacao"
               className="btn-ghost relative p-2"

@@ -6,7 +6,15 @@ import { LoginForm } from './login-form';
 
 export const metadata = { title: 'Entrar' };
 
-export default async function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const rawNext = Array.isArray(params.proximo) ? params.proximo[0] : params.proximo;
+  const next = rawNext && rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : undefined;
+
   const session = await readSession();
   if (session) redirect('/dashboard');
 
@@ -84,7 +92,7 @@ export default async function LoginPage() {
           </p>
 
           <div className="mt-8">
-            <LoginForm allowSignup={userCount === 0} />
+            <LoginForm allowSignup={userCount === 0} next={next} />
           </div>
         </div>
       </div>

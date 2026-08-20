@@ -1,4 +1,4 @@
-import { requireContext } from '@/lib/tenant';
+import { requirePermission } from '@/lib/tenant';
 import { prisma } from '@/lib/prisma';
 import { Alert, PageHeader } from '@/components/ui/primitives';
 import { ROLE_DESCRIPTIONS, ROLE_LABELS, ROLES, type Role } from '@/lib/permissions';
@@ -8,7 +8,7 @@ export const metadata = { title: 'Usuarios e permissoes' };
 export const dynamic = 'force-dynamic';
 
 export default async function UsersPage() {
-  const ctx = await requireContext();
+  const ctx = await requirePermission('users.manage');
 
   const memberships = await prisma.membership.findMany({
     where: { companyId: ctx.company.id },

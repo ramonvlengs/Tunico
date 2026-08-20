@@ -1,4 +1,4 @@
-import { requireContext } from '@/lib/tenant';
+import { requirePermission } from '@/lib/tenant';
 import { prisma } from '@/lib/prisma';
 import { getFormOptions } from '@/server/entry-query';
 import { Alert, PageHeader } from '@/components/ui/primitives';
@@ -8,7 +8,7 @@ export const metadata = { title: 'Regras de conciliacao' };
 export const dynamic = 'force-dynamic';
 
 export default async function RulesPage() {
-  const ctx = await requireContext();
+  const ctx = await requirePermission('reconciliation.manage');
   const [rules, options] = await Promise.all([
     prisma.reconciliationRule.findMany({
       where: { companyId: ctx.company.id },

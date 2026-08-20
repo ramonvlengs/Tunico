@@ -9,7 +9,6 @@ export const metadata: Metadata = {
   description:
     'ERP financeiro da Tunico TCG: multi-CNPJ, contas a pagar e receber, fluxo de caixa, DRE e conciliacao bancaria por OFX, Excel e PDF.',
   applicationName: 'TunicoTCG Control',
-  icons: { icon: '/brand/icon.svg', apple: '/brand/icon.svg' },
 };
 
 export const viewport: Viewport = {

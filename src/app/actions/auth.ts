@@ -41,7 +41,12 @@ export async function loginAction(_prev: ActionState, formData: FormData): Promi
   });
   if (membership) await setActiveCompany(membership.companyId);
 
-  redirect('/dashboard');
+  // Volta para a pagina que o usuario tentou abrir antes de logar. So aceitamos
+  // caminhos internos, para nao virar um redirecionador aberto.
+  const next = String(formData.get('proximo') ?? '');
+  const safeNext = /^\/(?!\/)[A-Za-z0-9\-._~/?#[\]@!$&'()*+,;=%]*$/.test(next) ? next : null;
+
+  redirect(safeNext ?? '/dashboard');
 }
 
 export async function logoutAction() {

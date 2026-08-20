@@ -74,6 +74,19 @@ export async function requireContext(): Promise<AppContext> {
   };
 }
 
+/**
+ * Igual a requireContext, mas exige uma permissao. Sem ela, o usuario e levado
+ * para a tela de acesso negado - impede que alguem alcance uma pagina sensivel
+ * digitando a URL, mesmo com o item de menu escondido.
+ */
+export async function requirePermission(permission: Permission): Promise<AppContext> {
+  const ctx = await requireContext();
+  if (!ctx.can(permission)) {
+    redirect(`/sem-permissao?de=${encodeURIComponent(permission)}`);
+  }
+  return ctx;
+}
+
 /** Versao para rotas de API: lanca erro em vez de redirecionar. */
 export async function requireApiContext(): Promise<
   { ok: true; ctx: AppContext } | { ok: false; status: number; error: string }

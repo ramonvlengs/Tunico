@@ -15,7 +15,7 @@ function SubmitButton({ label, icon }: { label: string; icon: React.ReactNode })
   );
 }
 
-export function LoginForm({ allowSignup }: { allowSignup: boolean }) {
+export function LoginForm({ allowSignup, next }: { allowSignup: boolean; next?: string }) {
   const [mode, setMode] = useState<'login' | 'signup'>(allowSignup ? 'signup' : 'login');
   const [showPassword, setShowPassword] = useState(false);
 
@@ -30,6 +30,8 @@ export function LoginForm({ allowSignup }: { allowSignup: boolean }) {
 
       {mode === 'login' ? (
         <form action={doLogin} className="space-y-4">
+          {next && <input type="hidden" name="proximo" value={next} />}
+
           <Field label="E-mail" htmlFor="email" required>
             <input
               id="email"
